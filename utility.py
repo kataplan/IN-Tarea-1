@@ -5,8 +5,7 @@ import numpy  as np
   
 #load parameters to train the SNN
 def load_cnf():
-    cnf = pd.read_csv('cnf.csv', header=None)
-    print(cnf)
+    cnf = np.genfromtxt("cnf.csv")
     return cnf
 
 

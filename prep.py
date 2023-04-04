@@ -42,39 +42,36 @@ def data_class(x,j,i):
 
 
 # Create Features from Data
+#lista de matrices(clases)
 def create_features(X,Param):
-    
+  n_frame = Param[1]
+  l_frame = Param[2]
+
+  print(n_frame)
+  
   return() 
 
 
 # Load data from ClassXX.csv
 def load_data():
-  main_dir = os.listdir()
-  # Filtrar las caroetas que siguen el patrón "DataX"
-  dirs = [d for d in main_dir if d.startswith("Data")] 
-  
-  for dir in dirs:
-    # Obtener la lista de archivos en el directorio
-    files = os.listdir(dir)
+  # Directorio donde se encuentran los archivos
+  dir_path = "Data/"
 
-    # Filtrar los archivos que siguen el patrón "classX.csv"
-    files = [f for f in files if f.startswith("class") and f.endswith(".csv")]
+  # Obtener la lista de archivos en el directorio
+  files = os.listdir(dir_path)
 
-    # Leer cada archivo y almacenarlo en un dataframe
-    df_list = []
-    for file in files:
-        filepath = os.path.join(dir, file)
-        df = pd.read_csv(filepath,header=None)
-        df_list.append(df)
-    print(df_list)
-  
-  return df_list 
+  # Filtrar los archivos que siguen el patrón "classX.csv"
+  files = [f for f in files if f.startswith("class") and f.endswith(".csv")]
 
-# Parameters for pre-proc.
-def load_cnf():
-    cnf = pd.read_csv('cnf.csv')
-    print(cnf)
-    return cnf
+  # Leer cada archivo y almacenarlo en un dataframe
+  dataframes = []
+  for file in files:
+      filepath = os.path.join(dir_path, file)
+      df = pd.read_csv(filepath)
+      dataframes.append(df)
+
+  # Combinar todos los dataframes en uno solo
+  return dataframes
 
 # Beginning 
 def main():        
