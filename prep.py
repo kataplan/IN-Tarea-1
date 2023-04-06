@@ -5,13 +5,24 @@ import os
 
 # Save Data from  Hankel's features
 def save_data(X,Y):
-  X.to_csv('dtrain.csv', index=False)
-  Y.to_csv('dtest.csv', index=False)
+  np.savetxt("dtrain.csv", X, delimiter=",", fmt="%f")
+  np.savetxt("dtest.csv", Y, delimiter=",", fmt="%f")
+
   return
 
 # normalize data 
 def data_norm(X):
-  return (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+  # Calculamos la media de cada columna
+  media = np.mean(X, axis=0)
+
+  # Calculamos la desviación estándar de cada columna
+  std = np.std(X, axis=0)
+
+  # Normalizamos la matriz
+  X_norm = (X - media) / std
+
+  return X_norm
+
 
 # Binary Label
 def binary_label(i):
@@ -68,7 +79,7 @@ def data_class(df_list,j,i):
 # Create Features from Data
 #lista de matrices(clases)
 def create_features(Dat_list,param):
-  p = param[10]
+  p = param[9]
   nbr_class = len(Dat_list)
   Y=[]
   X=[]
@@ -76,16 +87,15 @@ def create_features(Dat_list,param):
     nbr_variable = Dat_list[i].shape[1]
     datF = []
     for j in range( nbr_variable):
-        print("i:",i)
-        print("j:",j)
         Xj = data_class(Dat_list, j, i) # Retorna j-th variable de i-th class
         Fj = hankel_features(Xj, param)
         datF.append(Fj)
     label = binary_label(i)
     Y = stack_label(label)
     X = stack_features(datF)
+  print(X)
   X = data_norm(X)
-  
+  print(X)
   return create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
 
 
@@ -147,7 +157,7 @@ def main():
     Param           = ut.load_cnf()	
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
-    InputDat        = data_norm(InputDat)
+    #InputDat        = data_norm(InputDat)
     save_data(InputDat,OutDat)
 
 
