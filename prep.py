@@ -3,6 +3,7 @@ import numpy      as np
 import utility    as ut
 import os
 
+
 # Save Data from  Hankel's features
 def save_data(X,Y):
   np.savetxt("dtrain.csv", X, delimiter=",", fmt="%f")
@@ -34,20 +35,20 @@ def entropy_spectral(S):
 def hankel_svd(frame, level):
  L = 2 # matriz diadica
  hankels = []
- frames = [frame]
+ frames = frame
  for i in range(level):
     for f in frames:
-      hankels.append(create_h_matrix(f,L))
+      hankels.append(create_hankel_matrix(f,L))
     frames = []
     c=[]
     for h in hankels:
-       c_0,c_1 = descomposition_svd(h)
-       h_0 = create_h_matrix(c_0)
-       h_1 = create_h_matrix(c_1)
+       c_0,c_1 = decomposition_svd(h)
+       h_0 = create_hankel_matrix(c_0)
+       h_1 = create_hankel_matrix(c_1)
        frames.append(h_0,h_1)
-       c.append(c_0)
-       c.append(c_1)
- return
+       c.append(c_0, c_1)
+  
+ return c
 
 def calculate_dyadic_component(H: np.ndarray):
   c = []
@@ -61,7 +62,7 @@ def calculate_dyadic_component(H: np.ndarray):
   c.append(H[1,r-1])
   return np.array(c).reshape(1,-1)
 
-def descomposition_svd(h_matrix):
+def decomposition_svd(h_matrix):
   U, S, V = np.linalg(h_matrix)
   M_0 = S[:,0]*U[:,0]*V[:,0]
   M_1 = S[:,1]*U[:,1]*V[:,1]
@@ -70,12 +71,15 @@ def descomposition_svd(h_matrix):
 
   return c_0,c_1
 
-def create_h_matrix(matriz,l):
-  n = matriz.shape[1]
-  h_0 = matriz[0,:-1].reshape(1,n-l+1)
-  h_1 = matriz[0,1:].reshape(1,n-l+1)
-  h_matrix = np.concatenate((h_0,h_1),axis=0).reshape(1,n-l+1)
-  return h_matrix
+def create_hankel_matrix(frame, L=2):
+  n= len(frame)
+  K = n - L + 1
+  H_frame = np.zeros((L, K))
+  for i in range(L):
+    for j in range(K):
+      if i + j < n:
+        H_frame[i][j] = frame[i + j]
+  return H_frame
 
 # Hankel's features
 #X = columna de matriz de clase
@@ -87,10 +91,10 @@ def hankel_features(X,Param):
   # Create Hankel matrix
   H = np.zeros((l_frame, n_frame))
   for j in range(n_frame):
-      start_idx = j * l_frame
-      end_idx = start_idx + l_frame
-      H[:, j] = X[start_idx:end_idx]
-      c = hankel_svd(H,level)
+    start_idx = j * l_frame
+    end_idx = start_idx + l_frame
+    H[:, j] = X[start_idx:end_idx]
+  c = hankel_svd(H,level)
 
   print(H.shape)
   # Compute SVD and truncate to 2J singular values
@@ -178,7 +182,7 @@ def load_data():
 
 # Beginning 
 def main():        
-    Param           = ut.load_cnf()	
+    Param           = ut.load_cnf() 
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
     #InputDat        = data_norm(InputDat)
