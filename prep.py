@@ -12,17 +12,12 @@ def save_data(X,Y):
 
 # normalize data 
 def data_norm(X):
-  # Calculamos la media de cada columna
-  media = np.mean(X, axis=0)
-
-  # Calculamos la desviación estándar de cada columna
-  std = np.std(X, axis=0)
-
-  # Normalizamos la matriz
-  X_norm = (X - media) / std
-
-  return X_norm
-
+  xmin = np.min(X)
+  xmax = np.max(X)
+  a = 0.01
+  b = 0.99
+  datos_norm = (X - xmin) / (xmax - xmin) * (b - a) + a
+  return datos_norm
 
 # Binary Label
 def binary_label(i):
@@ -36,31 +31,74 @@ def entropy_spectral(S):
   return -np.sum(S*np.log(S), axis=1)
 
 # Hankel-SVD
-def hankel_svd(Hankel_matrix):
-  return np.linalg.svd(Hankel_matrix)
+def hankel_svd(frame, level):
+ L = 2 # matriz diadica
+ hankels = []
+ frames = [frame]
+ for i in range(level):
+    for f in frames:
+      hankels.append(create_h_matrix(f,L))
+    frames = []
+    c=[]
+    for h in hankels:
+       c_0,c_1 = descomposition_svd(h)
+       h_0 = create_h_matrix(c_0)
+       h_1 = create_h_matrix(c_1)
+       frames.append(h_0,h_1)
+       c.append(c_0)
+       c.append(c_1)
+ return
 
-# Hankel's features 
+def calculate_dyadic_component(H: np.ndarray):
+  c = []
+  j = 0
+  k = 1
+  r = H.shape[1]
+  for i in range(1,r):
+      component = (H[j,i] + H[k,i-1]) / 2
+      c.append(component)
+  c.insert(0, H[0,0])
+  c.append(H[1,r-1])
+  return np.array(c).reshape(1,-1)
+
+def descomposition_svd(h_matrix):
+  U, S, V = np.linalg(h_matrix)
+  M_0 = S[:,0]*U[:,0]*V[:,0]
+  M_1 = S[:,1]*U[:,1]*V[:,1]
+  c_0 = calculate_dyadic_component(M_0)
+  c_1 = calculate_dyadic_component(M_1)
+
+  return c_0,c_1
+
+def create_h_matrix(matriz,l):
+  n = matriz.shape[1]
+  h_0 = matriz[0,:-1].reshape(1,n-l+1)
+  h_1 = matriz[0,1:].reshape(1,n-l+1)
+  h_matrix = np.concatenate((h_0,h_1),axis=0).reshape(1,n-l+1)
+  return h_matrix
+
+# Hankel's features
+#X = columna de matriz de clase
 def hankel_features(X,Param):
   n_frame = int(Param[1])
   l_frame = int(Param[2])
-  N = len(X)
-  nOverlap = l_frame // 2
-  nShift = l_frame - nOverlap
-  nFFT = l_frame
+  level = int(Param[3]) #nivel de descomposición 
 
   # Create Hankel matrix
   H = np.zeros((l_frame, n_frame))
   for j in range(n_frame):
-      start_idx = j * nShift
+      start_idx = j * l_frame
       end_idx = start_idx + l_frame
       H[:, j] = X[start_idx:end_idx]
+      c = hankel_svd(H,level)
 
+  print(H.shape)
   # Compute SVD and truncate to 2J singular values
   U, S, V = np.linalg.svd(H, full_matrices=False)
   S = S[:2 * n_frame]
 
   # Compute entropy of spectral amplitudes
-  p = np.abs(np.fft.fft(H, axis=0)[:nFFT // 2 + 1, :]) ** 2
+  p = np.abs(np.fft.fft(H, axis=0)[:l_frame // 2 + 1, :]) ** 2
   p = p / np.sum(p, axis=0)
   Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
 
@@ -83,7 +121,7 @@ def create_features(Dat_list,param):
   nbr_class = len(Dat_list)
   Y=[]
   X=[]
-  for i in range( nbr_class):
+  for i in range(nbr_class):
     nbr_variable = Dat_list[i].shape[1]
     datF = []
     for j in range( nbr_variable):
@@ -91,45 +129,31 @@ def create_features(Dat_list,param):
         Fj = hankel_features(Xj, param)
         datF.append(Fj)
     label = binary_label(i)
-    Y = stack_label(label)
-    X = stack_features(datF)
-  print(X)
-  X = data_norm(X)
-  print(X)
-  return create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
+    Y.append(label)
+    X.append(datF)
+ 
+  #X = data_norm(X)
+  dtrn, dtst = create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
+  return dtrn, dtst
 
-
-def stack_label(Label):
-  
-  return np.array(Label).reshape(-1,1)
-
-def stack_features(F):
-    return np.array(F).reshape(1, -1)
-
-
+def matrix_to_dataframe(X):
+  print(X.shape)
+  num_rows, num_cols = X.shape
+  df = pd.DataFrame(columns=range(num_cols))
+  for i in range(num_cols):
+      df[i] = X[:, i]
+  return df
 
 def create_dtrn_dtst(X, Y, p):
-  # Obtener la cantidad total de muestras
-  N = X.shape[0]
-
-  # Calcular el número de muestras de entrenamiento a partir del porcentaje dado
-  n_train = int(np.round(p * N))
-
-  # Generar índices aleatorios sin repetición para los conjuntos de entrenamiento y prueba
-  idx_train = np.random.choice(np.arange(N), size=n_train, replace=False)
-  idx_test = np.setdiff1d(np.arange(N), idx_train)
-
-  # Dividir los datos de entrada en entrenamiento y prueba
-  x_train, y_train = X[idx_train], Y[idx_train]
-  x_test, y_test = X[idx_test], Y[idx_test]
-
-  # Unir x_train y y_train
-  dtrn = np.concatenate((x_train, y_train.reshape(-1,1)), axis=1)
-  
-  # Unir x_test y y_test
-  dtst = np.concatenate((x_test, y_test.reshape(-1,1)), axis=1)
-
-  return dtrn,dtst
+  df = matrix_to_dataframe(X)
+  print(len(Y))
+  df['Y'] = Y
+  n_train = int(len(df) * p)
+  df_train = df[:n_train]
+  df_test = df[n_train:]
+  dtrn = df_train.to_numpy()
+  dtst = df_test.to_numpy()
+  return dtrn, dtst
 
 # Load data from ClassXX.csv
 def load_data():
@@ -158,6 +182,7 @@ def main():
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
     #InputDat        = data_norm(InputDat)
+    print(InputDat)
     save_data(InputDat,OutDat)
 
 
