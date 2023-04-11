@@ -63,7 +63,7 @@ def calculate_dyadic_component(H: np.ndarray):
   return np.array(c).reshape(1,-1)
 
 def decomposition_svd(h_matrix):
-  U, S, V = np.linalg(h_matrix)
+  U, S, V = np.linalg.svd(h_matrix)
   M_0 = S[:,0]*U[:,0]*V[:,0]
   M_1 = S[:,1]*U[:,1]*V[:,1]
   c_0 = calculate_dyadic_component(M_0)
@@ -88,27 +88,25 @@ def hankel_features(X,Param):
   l_frame = int(Param[2])
   level = int(Param[3]) #nivel de descomposición 
 
-  # Create Hankel matrix
-  H = np.zeros((l_frame, n_frame))
+  frames = np.zeros((l_frame, n_frame))
   for j in range(n_frame):
     start_idx = j * l_frame
     end_idx = start_idx + l_frame
-    H[:, j] = X[start_idx:end_idx]
-  c = hankel_svd(H,level)
+    frames[:, j] = X[start_idx:end_idx]
+  c = hankel_svd(frames,level)
 
-  print(H.shape)
-  # Compute SVD and truncate to 2J singular values
-  U, S, V = np.linalg.svd(H, full_matrices=False)
-  S = S[:2 * n_frame]
+  # # Compute SVD and truncate to 2J singular values
+  # U, S, V = np.linalg.svd(H, full_matrices=False)
+  # S = S[:2 * n_frame]
 
-  # Compute entropy of spectral amplitudes
-  p = np.abs(np.fft.fft(H, axis=0)[:l_frame // 2 + 1, :]) ** 2
-  p = p / np.sum(p, axis=0)
-  Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
+  # # Compute entropy of spectral amplitudes
+  # p = np.abs(np.fft.fft(H, axis=0)[:l_frame // 2 + 1, :]) ** 2
+  # p = p / np.sum(p, axis=0)
+  # Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
 
-  # Concatenate features
-  F = np.concatenate((Entropy_C, S))
-  F = F.reshape(1, -1)
+  # # Concatenate features
+  # F = np.concatenate((Entropy_C, S))
+  # F = F.reshape(1, -1)
 
   return F
 
@@ -174,7 +172,7 @@ def load_data():
   dataframes = []
   for file in files:
       filepath = os.path.join(dir_path, file)
-      df = pd.read_csv(filepath)
+      df = pd.read_csv(filepath,header= None)
       dataframes.append(df)
 
   # Combinar todos los dataframes en uno solo
