@@ -40,7 +40,6 @@ def hankel_svd(frame, level):
   hankels = []
   #se consigue las matriz de hankel para el primer frame y los c que llegan
   for f in frames:
-    print(f.shape)
     hankels.append(create_hankel_matrix(f,L))
   c = []
 
@@ -94,25 +93,29 @@ def hankel_features(X,Param):
   level = int(Param[3]) #nivel de descomposición 
 
   frames = np.zeros((l_frame, n_frame))
+ 
+  F = []
   for j in range(n_frame):
     start_idx = j * l_frame
     end_idx = start_idx + l_frame
     frames[:, j] = X[start_idx:end_idx] 
     c = hankel_svd(frames[:,j],level)
 
-  # # Compute SVD and truncate to 2J singular values
-  # U, S, V = np.linalg.svd(H, full_matrices=False)
-  # S = S[:2 * n_frame]
+    # Compute entropy of spectral amplitudes
+    # Verificar si esto está bien
+    p = np.abs(np.fft.fft(c, axis=0)[:l_frame // 2 + 1, :]) ** 2
+    p = p / np.sum(p, axis=0)
+    Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
 
-  # # Compute entropy of spectral amplitudes
-  # p = np.abs(np.fft.fft(H, axis=0)[:l_frame // 2 + 1, :]) ** 2
-  # p = p / np.sum(p, axis=0)
-  # Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
+    # Compute SVD and truncate to 2J singular values
+    U, S, V = np.linalg.svd(c, full_matrices=False)
+    S = S[:2 * n_frame]
 
-  # # Concatenate features
-  # F = np.concatenate((Entropy_C, S))
-  # F = F.reshape(1, -1)
+  
+    # Concatenate features
+    F.append([Entropy_C, S])
 
+  
   return F
 
 
@@ -136,9 +139,9 @@ def create_features(Dat_list,param):
     nbr_variable = Dat_list[i].shape[1]
     datF = []
     for j in range( nbr_variable):
-        Xj = data_class(Dat_list, j, i) # Retorna j-th variable de i-th class
-        Fj = hankel_features(Xj, param)
-        datF.append(Fj)
+      Xj = data_class(Dat_list, j, i) # Retorna j-th variable de i-th class
+      Fj = hankel_features(Xj, param)
+      datF.append(Fj)
     label = binary_label(i)
     Y.append(label)
     X.append(datF)
@@ -148,10 +151,10 @@ def create_features(Dat_list,param):
   return dtrn, dtst
 
 def matrix_to_dataframe(X):
-  num_rows, num_cols = X.shape
+  num_cols = len(X)
   df = pd.DataFrame(columns=range(num_cols))
   for i in range(num_cols):
-      df[i] = X[:, i]
+      df[i] = X[i]
   return df
 
 def create_dtrn_dtst(X, Y, p):
