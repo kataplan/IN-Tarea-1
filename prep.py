@@ -34,44 +34,49 @@ def entropy_spectral(S):
 # Hankel-SVD
 def hankel_svd(frame, level):
  L = 2 # matriz diadica
- hankels = []
- frames = frame
+
+ frames = [frame]
  for i in range(level):
-    for f in frames:
-      hankels.append(create_hankel_matrix(f,L))
-    frames = []
-    c=[]
-    for h in hankels:
-       c_0,c_1 = decomposition_svd(h)
-       h_0 = create_hankel_matrix(c_0)
-       h_1 = create_hankel_matrix(c_1)
-       frames.append(h_0,h_1)
-       c.append(c_0, c_1)
-  
+  hankels = []
+  #se consigue las matriz de hankel para el primer frame y los c que llegan
+  for f in frames:
+    print(f.shape)
+    hankels.append(create_hankel_matrix(f,L))
+  c = []
+
+  for h in hankels:
+    c_0,c_1 = decomposition_svd(h)
+    c.append(c_0.reshape(-1))
+    c.append(c_1.reshape(-1))
+  frames = c.copy()  
+
  return c
 
 def calculate_dyadic_component(H: np.ndarray):
-  c = []
-  j = 0
-  k = 1
-  r = H.shape[1]
-  for i in range(1,r):
-      component = (H[j,i] + H[k,i-1]) / 2
-      c.append(component)
-  c.insert(0, H[0,0])
-  c.append(H[1,r-1])
-  return np.array(c).reshape(1,-1)
+  r = H.shape[0]     
+  c = [H[0, 0], (H[1, 0] + H[0, 1]) / 2]     
+  for i in range(1, r - 1):         
+    c.append((H[i, i-1] + H[i-1, i]) / 2)     
+  c.append((H[r-2, r-1] + H[r-1, r-2]) / 2)     
+  c.append(H[1, r-1])     
+  return np.array(c)[np.newaxis, :]
+
+
 
 def decomposition_svd(h_matrix):
-  U, S, V = np.linalg.svd(h_matrix)
-  M_0 = S[:,0]*U[:,0]*V[:,0]
-  M_1 = S[:,1]*U[:,1]*V[:,1]
+  U, s, vh = np.linalg.svd(h_matrix, full_matrices=False)
+
+  M_0 =  s[0] * U[:, 0].reshape(-1, 1) * vh[0, :].reshape(1, -1)
+  M_1 =  s[1] * U[:, 1].reshape(-1, 1) * vh[1, :].reshape(1, -1)
+  
   c_0 = calculate_dyadic_component(M_0)
   c_1 = calculate_dyadic_component(M_1)
-
+  
   return c_0,c_1
 
-def create_hankel_matrix(frame, L=2):
+
+
+def create_hankel_matrix(frame:np.array, L=2):
   n= len(frame)
   K = n - L + 1
   H_frame = np.zeros((L, K))
@@ -92,8 +97,8 @@ def hankel_features(X,Param):
   for j in range(n_frame):
     start_idx = j * l_frame
     end_idx = start_idx + l_frame
-    frames[:, j] = X[start_idx:end_idx]
-  c = hankel_svd(frames,level)
+    frames[:, j] = X[start_idx:end_idx] 
+    c = hankel_svd(frames[:,j],level)
 
   # # Compute SVD and truncate to 2J singular values
   # U, S, V = np.linalg.svd(H, full_matrices=False)
@@ -109,6 +114,10 @@ def hankel_features(X,Param):
   # F = F.reshape(1, -1)
 
   return F
+
+
+
+
 
 
 # Obtain j-th variables of the i-th class
@@ -139,7 +148,6 @@ def create_features(Dat_list,param):
   return dtrn, dtst
 
 def matrix_to_dataframe(X):
-  print(X.shape)
   num_rows, num_cols = X.shape
   df = pd.DataFrame(columns=range(num_cols))
   for i in range(num_cols):
@@ -148,7 +156,6 @@ def matrix_to_dataframe(X):
 
 def create_dtrn_dtst(X, Y, p):
   df = matrix_to_dataframe(X)
-  print(len(Y))
   df['Y'] = Y
   n_train = int(len(df) * p)
   df_train = df[:n_train]
@@ -184,7 +191,6 @@ def main():
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
     #InputDat        = data_norm(InputDat)
-    print(InputDat)
     save_data(InputDat,OutDat)
 
 
