@@ -107,20 +107,14 @@ def hankel_features(X,Param):
     p = p / np.sum(p, axis=0)
     Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
 
-    # Compute SVD and truncate to 2J singular values
+    # Compute SVD 
     U, S, V = np.linalg.svd(c, full_matrices=False)
-    S = S[:2 * n_frame]
-
   
     # Concatenate features
     F.append([Entropy_C, S])
-
   
-  return F
-
-
-
-
+  
+  return np.array(F).reshape(-1,2)
 
 
 # Obtain j-th variables of the i-th class
@@ -131,40 +125,62 @@ def data_class(df_list,j,i):
 # Create Features from Data
 #lista de matrices(clases)
 def create_features(Dat_list,param):
-  p = param[9]
+  p = param[7]
   nbr_class = len(Dat_list)
   Y=[]
-  X=[]
+  X= np.array([])
   for i in range(nbr_class):
     nbr_variable = Dat_list[i].shape[1]
-    datF = []
+    datF = np.array([])
     for j in range( nbr_variable):
       Xj = data_class(Dat_list, j, i) # Retorna j-th variable de i-th class
       Fj = hankel_features(Xj, param)
-      datF.append(Fj)
+      if j == 0:
+        datF = Fj
+      else:
+        datF = np.concatenate((datF,Fj))
+    
     label = binary_label(i)
     Y.append(label)
-    X.append(datF)
+    if i == 0:
+      X = datF
+    else:
+      X = np.concatenate((X,datF),axis=1)
+  
  
-  #X = data_norm(X)
+  X = data_norm(X)
+  
   dtrn, dtst = create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
   return dtrn, dtst
 
-def matrix_to_dataframe(X):
-  num_cols = len(X)
-  df = pd.DataFrame(columns=range(num_cols))
-  for i in range(num_cols):
-      df[i] = X[i]
-  return df
 
-def create_dtrn_dtst(X, Y, p):
-  df = matrix_to_dataframe(X)
-  df['Y'] = Y
-  n_train = int(len(df) * p)
-  df_train = df[:n_train]
-  df_test = df[n_train:]
-  dtrn = df_train.to_numpy()
-  dtst = df_test.to_numpy()
+
+def create_dtrn_dtst(X:np.array, Y, p):
+
+  Y = np.array(Y).reshape(-1)
+  print(X.shape)
+  print(Y.shape)
+
+  # Reordenar aleatoriamente las posiciones de la data
+  np.random.shuffle(X)
+  
+  # Dividir la data X y data Y
+  train_size = int(X.shape[0]*p)
+  
+  xe = X[:, :train_size]
+  ye = Y[:train_size]
+
+  xv = X[:,train_size:]
+  yv = Y[train_size:]
+  
+  # Crear archivo de training csv
+  dtrn = pd.DataFrame(np.hstack((xe, ye)))
+  dtrn.to_csv('dtrain.csv', index=False,header=None)
+  print(dtrn)
+  # Crear archivo de testing csv
+  dtst = pd.DataFrame(np.hstack((xv, yv)),)
+  dtst.to_csv('dtest.csv', index=False,header=None)
+
   return dtrn, dtst
 
 # Load data from ClassXX.csv
@@ -193,7 +209,7 @@ def main():
     Param           = ut.load_cnf() 
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
-    #InputDat        = data_norm(InputDat)
+    InputDat        = data_norm(InputDat)
     save_data(InputDat,OutDat)
 
 
