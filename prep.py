@@ -22,7 +22,6 @@ def data_norm(X):
   a = 0.01
   b = 0.99
   datos_norm = (X - xmin) / (xmax - xmin) * (b - a) + a
-  print(datos_norm.shape)
   return datos_norm
 
 # Binary Label
@@ -156,7 +155,7 @@ def create_dtrn_dtst(X_list:np.array, Y_list, p):
       XY = add_array_rows(X_list[i],Y_list[i])
       continue
     XY = np.concatenate((XY,add_array_rows(X_list[i],Y_list[i])))
-  print(XY.shape)
+
   # Reordenar aleatoriamente las posiciones de la data
   np.random.shuffle(XY)
   
