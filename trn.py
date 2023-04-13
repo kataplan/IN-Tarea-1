@@ -13,18 +13,17 @@ def save_w_mse():
 def trn_minibatch(x,y,W,param):
     M = int(param[8])
     N = x.shape[0]
-    nBatch = N // M
-    print(nBatch)
+    nBatch = (N // M) #NO TERMINA DE USAR TODOS LOS DATOS
     act_f = int(param[6])
     
     # Training loop
-    for n in range(1, nBatch):
+    for n in range(1, nBatch+1):
         Idx = get_Idx_n_Batch(n, M)
-        print(Idx)
-        xe = x[:,:Idx[len(Idx)]]
-        ye = y[:,Idx]
+        xe = x[Idx,:]
+        ye = y[Idx,:]
         Act = ut.forward(xe, W, act_f)
-        print(Act)
+
+        #FALTA
         gW, cost = ut.gradW(Act, ye, W, param)
         W, V = ut.updWV_sgdm(W, gW, param)
     

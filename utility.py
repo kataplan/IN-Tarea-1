@@ -30,12 +30,12 @@ def forward():
 
 #Activation function
 def forward(x,W,n_function):        
-    a = x
+    a = x.T
     A = [a]
     for w in W:
-        a_i =( w * act_function(w,a,n_function) ) 
+        a_i =(act_function(w,a,n_function)) 
         A.append(a_i)
-        a = a_i
+        a = a_i.T
     return A
 # Derivatives of the activation funciton
 def deriva_act():
@@ -64,7 +64,7 @@ def confusion_matrix(z,y):
 
 #Activation function
 def act_function(w,X,function_number):
-    z = np.dot(w, X.T)
+    z = np.dot(w.T, X)
     if(function_number==1):
         h_z = ReLu_function(z).T
     if(function_number==2):
