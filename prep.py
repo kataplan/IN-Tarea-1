@@ -5,9 +5,13 @@ import os
 
 
 # Save Data from  Hankel's features
-def save_data(X,Y):
-  np.savetxt("dtrn.csv", X, delimiter=",", fmt="%f")
-  np.savetxt("dtst.csv", Y, delimiter=",", fmt="%fz")
+def save_data(X,Y,param):
+  p = param[7]
+
+  dtrn, dtst = create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
+  
+  np.savetxt("dtrn.csv", dtrn, delimiter=",", fmt="%f")
+  np.savetxt("dtst.csv", dtst, delimiter=",", fmt="%f")
 
   return
 
@@ -18,6 +22,7 @@ def data_norm(X):
   a = 0.01
   b = 0.99
   datos_norm = (X - xmin) / (xmax - xmin) * (b - a) + a
+  print(datos_norm.shape)
   return datos_norm
 
 # Binary Label
@@ -25,12 +30,7 @@ def binary_label(i,n):
   label = [0] * n
   label[i] = 1
   return label
-  
 
-# Fourier spectral entropy
-def entropy_spectral(S):
-
-  return -np.sum(S*np.log(S), axis=1)
 
 # Hankel-SVD
 def hankel_svd(frame, level):
@@ -60,8 +60,6 @@ def calculate_dyadic_component(H: np.ndarray):
   c.append((H[r-2, r-1] + H[r-1, r-2]) / 2)     
   c.append(H[1, r-1])     
   return np.array(c)[np.newaxis, :]
-
-
 
 def decomposition_svd(h_matrix):
   U, s, vh = np.linalg.svd(h_matrix, full_matrices=False)
@@ -124,7 +122,6 @@ def data_class(df_list,j,i):
 # Create Features from Data
 #lista de matrices(clases)
 def create_features(Dat_list,param):
-  p = param[7]
   nbr_class = len(Dat_list)
   Y = []
   X = []
@@ -142,12 +139,8 @@ def create_features(Dat_list,param):
     label = binary_label(i, nbr_class)
     Y.append(label)
     X.append(datF)
-
- 
-  X = data_norm(X)
   
-  dtrn, dtst = create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
-  return dtrn, dtst
+  return X, Y
 
 
 def add_array_rows(X, Y):
@@ -155,13 +148,15 @@ def add_array_rows(X, Y):
     return np.hstack((X, Y_rep))
 
 def create_dtrn_dtst(X_list:np.array, Y_list, p):
-  XY = np.array([])  
   
+  XY = np.array([])  
+  len(Y_list[1])
   for i in range(len(Y_list[1])):
     if( i == 0 ):
       XY = add_array_rows(X_list[i],Y_list[i])
+      continue
     XY = np.concatenate((XY,add_array_rows(X_list[i],Y_list[i])))
-
+  print(XY.shape)
   # Reordenar aleatoriamente las posiciones de la data
   np.random.shuffle(XY)
   
@@ -204,7 +199,7 @@ def main():
     Data            = load_data()	
     InputDat,OutDat = create_features(Data, Param)
     InputDat        = data_norm(InputDat)
-    save_data(InputDat,OutDat)
+    save_data(InputDat,OutDat,Param)
 
 
 if __name__ == '__main__':   
