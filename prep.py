@@ -6,8 +6,8 @@ import os
 
 # Save Data from  Hankel's features
 def save_data(X,Y):
-  np.savetxt("dtrain.csv", X, delimiter=",", fmt="%f")
-  np.savetxt("dtest.csv", Y, delimiter=",", fmt="%f")
+  np.savetxt("dtrn.csv", X, delimiter=",", fmt="%f")
+  np.savetxt("dtst.csv", Y, delimiter=",", fmt="%fz")
 
   return
 
@@ -21,10 +21,11 @@ def data_norm(X):
   return datos_norm
 
 # Binary Label
-def binary_label(i):
-  Label = np.zeros((1, 2))
-  Label[0, i - 1] = 1
-  return Label
+def binary_label(i,n):
+  label = [0] * n
+  label[i] = 1
+  return label
+  
 
 # Fourier spectral entropy
 def entropy_spectral(S):
@@ -101,8 +102,8 @@ def hankel_features(X,Param):
     frames[:, j] = X[start_idx:end_idx] 
     c = hankel_svd(frames[:,j],level)
 
-    # Compute entropy of spectral amplitudes
     # Verificar si esto está bien
+    # Compute entropy of spectral amplitudes
     p = np.abs(np.fft.fft(c, axis=0)[:l_frame // 2 + 1, :]) ** 2
     p = p / np.sum(p, axis=0)
     Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
@@ -112,9 +113,7 @@ def hankel_features(X,Param):
   
     # Concatenate features
     F.append([Entropy_C, S])
-  
-  
-  return np.array(F).reshape(-1,2)
+  return np.array(F).reshape(-1,2*2**level)
 
 
 # Obtain j-th variables of the i-th class
@@ -127,8 +126,8 @@ def data_class(df_list,j,i):
 def create_features(Dat_list,param):
   p = param[7]
   nbr_class = len(Dat_list)
-  Y=[]
-  X= np.array([])
+  Y = []
+  X = []
   for i in range(nbr_class):
     nbr_variable = Dat_list[i].shape[1]
     datF = np.array([])
@@ -140,13 +139,10 @@ def create_features(Dat_list,param):
       else:
         datF = np.concatenate((datF,Fj))
     
-    label = binary_label(i)
+    label = binary_label(i, nbr_class)
     Y.append(label)
-    if i == 0:
-      X = datF
-    else:
-      X = np.concatenate((X,datF),axis=1)
-  
+    X.append(datF)
+
  
   X = data_norm(X)
   
@@ -154,32 +150,30 @@ def create_features(Dat_list,param):
   return dtrn, dtst
 
 
+def add_array_rows(X, Y):
+    Y_rep = np.tile(Y, (X.shape[0], 1)) # replicar Y n veces
+    return np.hstack((X, Y_rep))
 
-def create_dtrn_dtst(X:np.array, Y, p):
-
-  Y = np.array(Y).reshape(-1)
-  print(X.shape)
-  print(Y.shape)
+def create_dtrn_dtst(X_list:np.array, Y_list, p):
+  XY = np.array([])  
+  
+  for i in range(len(Y_list[1])):
+    if( i == 0 ):
+      XY = add_array_rows(X_list[i],Y_list[i])
+    XY = np.concatenate((XY,add_array_rows(X_list[i],Y_list[i])))
 
   # Reordenar aleatoriamente las posiciones de la data
-  np.random.shuffle(X)
+  np.random.shuffle(XY)
   
   # Dividir la data X y data Y
-  train_size = int(X.shape[0]*p)
+  train_size = int(XY.shape[0]*p)
   
-  xe = X[:, :train_size]
-  ye = Y[:train_size]
-
-  xv = X[:,train_size:]
-  yv = Y[train_size:]
-  
+  dtrn = XY[:train_size, :]  
+  dtst = XY[train_size:, :]
+ 
   # Crear archivo de training csv
-  dtrn = pd.DataFrame(np.hstack((xe, ye)))
-  dtrn.to_csv('dtrain.csv', index=False,header=None)
-  print(dtrn)
-  # Crear archivo de testing csv
-  dtst = pd.DataFrame(np.hstack((xv, yv)),)
-  dtst.to_csv('dtest.csv', index=False,header=None)
+  np.savetxt('dtrn.csv', dtrn, delimiter=',',fmt="%1.5f")
+  np.savetxt('dtst.csv', dtst, delimiter=',',fmt="%1.5f")
 
   return dtrn, dtst
 
