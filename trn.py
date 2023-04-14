@@ -10,7 +10,7 @@ def save_w_mse():
     return
 
 #miniBatch-SGDM's Training 
-def trn_minibatch(x,y,W,param):
+def trn_minibatch(x,y,W,V,param):
     M = int(param[8])
     N = x.shape[0]
     nBatch = (N // M) #NO TERMINA DE USAR TODOS LOS DATOS
@@ -21,11 +21,11 @@ def trn_minibatch(x,y,W,param):
         Idx = get_Idx_n_Batch(n, M)
         xe = x[Idx,:]
         ye = y[Idx,:]
-        Act = ut.forward(xe, W, act_f)
-
+        act = ut.forward(xe, W, act_f)
+        
         #FALTA
-        gW, cost = ut.gradW(Act, ye, W, param)
-        W, V = ut.updWV_sgdm(W, gW, param)
+        gW, cost = ut.gradW(act, ye, W, param)
+        W, V = ut.updWV_sgdm(W,V, gW, param)
     
     return cost, W
 
@@ -52,12 +52,12 @@ def train(x,y,param):
         L = -1
     nodes.append(n_output_nodes)
 
-    W = ut.iniWs(L, nodes)
+    W,V = ut.iniWs(L, nodes)
     MSE = []
 
     for i in range(iter):
         x,y = sort_data_ramdom(x,y)
-        cost, W = trn_minibatch(x,y,W, param) 
+        cost, W = trn_minibatch(x,y,W,V, param) 
 
     return(W,cost)
 
