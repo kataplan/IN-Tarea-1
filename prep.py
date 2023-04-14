@@ -7,7 +7,6 @@ import os
 # Save Data from  Hankel's features
 def save_data(X,Y,param):
   p = param[7]
-
   dtrn, dtst = create_dtrn_dtst(X, Y, p) # p: denota porcentaje de training.
   
   np.savetxt("dtrn.csv", dtrn, delimiter=",", fmt="%f")
@@ -40,25 +39,30 @@ def hankel_svd(frame, level):
   hankels = []
   #se consigue las matriz de hankel para el primer frame y los c que llegan
   for f in frames:
-    hankels.append(create_hankel_matrix(f,L))
-  c = []
+    h = create_hankel_matrix(f,L)
+    hankels.append(h)
 
+  c = []
   for h in hankels:
+    
     c_0,c_1 = decomposition_svd(h)
     c.append(c_0.reshape(-1))
     c.append(c_1.reshape(-1))
+    
   frames = c.copy()  
-
  return c
 
 def calculate_dyadic_component(H: np.ndarray):
-  r = H.shape[0]     
-  c = [H[0, 0], (H[1, 0] + H[0, 1]) / 2]     
-  for i in range(1, r - 1):         
-    c.append((H[i, i-1] + H[i-1, i]) / 2)     
-  c.append((H[r-2, r-1] + H[r-1, r-2]) / 2)     
-  c.append(H[1, r-1])     
-  return np.array(c)[np.newaxis, :]
+  c = []
+  j = 0
+  k = 1
+  r = H.shape[1]
+  for i in range(1,r):
+      component = (H[j,i] + H[k,i-1]) / 2
+      c.append(component)
+  c.insert(0, H[0,0])
+  c.append(H[1,r-1])
+  return np.array(c).reshape(1,-1)
 
 def decomposition_svd(h_matrix):
   U, s, vh = np.linalg.svd(h_matrix, full_matrices=False)
@@ -71,10 +75,9 @@ def decomposition_svd(h_matrix):
   
   return c_0,c_1
 
-
-
 def create_hankel_matrix(frame:np.array, L=2):
   n= len(frame)
+  
   K = n - L + 1
   H_frame = np.zeros((L, K))
   for i in range(L):
@@ -83,13 +86,40 @@ def create_hankel_matrix(frame:np.array, L=2):
         H_frame[i][j] = frame[i + j]
   return H_frame
 
-# Hankel's features
-#X = columna de matriz de clase
+
+def elements_in_range(x, lower_bound, upper_bound):
+  cont = 0
+  for num in x:
+    if lower_bound <= num <= upper_bound:
+      cont += 1
+
+  return cont
+
+def entropy_spectral(X):
+  amplitudes = np.abs(np.fft.fft(X))
+
+  I_x = int(np.sqrt(len(amplitudes)))
+  x_max = np.max(amplitudes)
+  x_min = np.min(amplitudes)
+  x_range = x_max - x_min
+
+  entropy = 0
+  prob = 0
+
+  step_range = x_range / I_x
+  lower_bound = x_min
+
+  for _ in range(I_x):
+    upper_bound = lower_bound + step_range
+    prob = 0 if elements_in_range(amplitudes, lower_bound, upper_bound) == 0 else elements_in_range(amplitudes,lower_bound,upper_bound) / len(amplitudes)
+    entropy += prob*np.log2(prob)
+
+  return -entropy
+
 def hankel_features(X,Param):
   n_frame = int(Param[1])
   l_frame = int(Param[2])
   level = int(Param[3]) #nivel de descomposición 
-
   frames = np.zeros((l_frame, n_frame))
  
   F = []
@@ -97,19 +127,20 @@ def hankel_features(X,Param):
     start_idx = j * l_frame
     end_idx = start_idx + l_frame
     frames[:, j] = X[start_idx:end_idx] 
+    
     c = hankel_svd(frames[:,j],level)
 
     # Verificar si esto está bien
     # Compute entropy of spectral amplitudes
-    p = np.abs(np.fft.fft(c, axis=0)[:l_frame // 2 + 1, :]) ** 2
-    p = p / np.sum(p, axis=0)
-    Entropy_C = -np.sum(p * np.log2(p + 1e-10), axis=0)
-
+    entropy_c = np.array([])
+    for c_i in c:
+      entropy_c_i = entropy_spectral(c_i)
+      entropy_c = np.append(entropy_c, entropy_c_i)
     # Compute SVD 
     U, S, V = np.linalg.svd(c, full_matrices=False)
-  
     # Concatenate features
-    F.append([Entropy_C, S])
+    F.append([entropy_c, S])
+   
   return np.array(F).reshape(-1,2*2**level)
 
 
