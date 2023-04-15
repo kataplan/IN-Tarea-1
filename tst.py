@@ -4,27 +4,35 @@ import utility as ut
 
 
 def save_measure(cm,Fsc):
-    ...
-    return()
+    np.savetxt('cmatriz.csv', cm)
+    np.savetxt('fscores.csv', Fsc,fmt="%1.25f")
+ 
 
 def load_w():
-    ...
-    return(...)
+    W = np.load('w_snn.npz', allow_pickle=True)
+    w = W['W']
+    return w
 
 
 
-def load_data_test():
-    ....
-    return(...)
+def load_data_test(param):
+    
+    n = int(param[0])
+    data = np.genfromtxt('dtrn.csv', delimiter=',')
+    x = np.array(data[:,:-n])
+    y = np.array(data[:,-n:])
+    
+    return x,y
     
 
 # Beginning ...
-def main():			
-	xv,yv  = load_data_test()
-	W      = load_w()
-	zv     = ut.forward(xv,W)      		
-	cm,Fsc = ut.metricas(yv,zv) 	
-	save_measure(cm,Fsc)
+def main():
+    param  = ut.load_cnf()
+    xv,yv  = load_data_test(param)
+    W      = load_w()
+    zv     = ut.forward(xv,W, int(param[6]))
+    cm,Fsc = ut.metricas(yv,zv[len(zv)-1]) 	
+    save_measure(cm,Fsc)
 		
 
 if __name__ == '__main__':   

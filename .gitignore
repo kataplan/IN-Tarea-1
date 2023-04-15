@@ -1,3 +1,7 @@
 __pycache__
 dtrn.csv
 dtst.csv
+costo.csv
+cmatriz.csv
+fscores.csv
+w_snn.npz

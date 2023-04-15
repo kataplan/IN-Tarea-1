@@ -22,12 +22,10 @@ def trn_minibatch(x,y,W,V,param):
         xe = x[Idx,:]
         ye = y[Idx,:]
         act = ut.forward(xe, W, act_f)
-        
-        #FALTA
         gW, cost = ut.gradW(act, ye, W, param)
         W, V = ut.updWV_sgdm(W,V, gW, param)
     
-    return cost, W
+    return cost, W, V
 
 #SNN's Training 
 def train(x,y,param):
@@ -57,9 +55,11 @@ def train(x,y,param):
 
     for i in range(iter):
         x,y = sort_data_ramdom(x,y)
-        cost, W = trn_minibatch(x,y,W,V, param) 
-
-    return(W,cost)
+        cost, W, W = trn_minibatch(x,y,W,V, param) 
+        MSE.append(np.mean(cost))
+        if (i  % 10)==0:
+            print("Iterar-SGD:", i, MSE[i])
+    return(W,MSE)
 
 # Function to get the indices of the n-th batch
 def get_Idx_n_Batch(n, M):
@@ -82,8 +82,10 @@ def load_data_trn(param):
     y = data[:,-n:]
     return(x,y)
     
-def save_w_cost():
+def save_w_cost(W,Cost):
     
+    np.savez('w_snn.npz', W=W)
+    np.savetxt("costo.csv", Cost, delimiter=",", fmt="%f")
     return  
 # Beginning ...
 def main():

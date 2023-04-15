@@ -17,7 +17,6 @@ def iniWs(L,nodes):
         w,v = iniW(nodes[i],nodes[i+1])
         W.append(w)
         V.append(v)
-    print(W[-1].shape)
     return(W, V)
 
 # Initialize weights for one-layer    
@@ -30,62 +29,83 @@ def iniW(next,prev):
 
 # Feed-forward of SNN
 def forward(x,W,n_function):        
-    a = x.T
+    a = x
     A = [a]
     for i in range(len(W)):
         w = W[i]
         if i == len(W)-1:
-            a_i =(act_function(w,a,5)) 
+            a_i =(act_function(w,a.T,5)) 
         else:
-            a_i =(act_function(w,a,n_function)) 
+            a_i =(act_function(w,a.T,n_function)) 
         A.append(a_i)    
-        a = a_i.T
+        a = a_i
     return A
 
 #Feed-Backward of SNN
 def gradW(act, ye, W, param): 
     mu = param[9]
-   
+    M = int(param[8])
+
     e = ye - act[len(act)-1]
     hidden_act_function = param[6]
+    gW = []
+    W_i = []
     for i in reversed(range(len(W))): # reversed para tomar primero la salida
-        print(i)
         w = W[i]
-        W_i = []
         z  = np.dot(w.T,act[i].T)
         if i == len(W)-1: # primera iteracion osea capa de salida
             derivate_z = derivate_act(z,5)
             gamma = np.multiply(e  ,derivate_z)
-            dif_C = np.dot(gamma.T, act[i])
-            w_i = w - mu*dif_C.T
-            W_i.append(w_i)
-            w_prev = w
-            continue
-        derivate_z = derivate_act(z,hidden_act_function)
-        dot = np.dot(gamma,w_prev.T)
-        gamma = np.multiply(dot,derivate_z.T)
-        dif_C = np.dot(gamma.T, act[i])
+        else:
+            derivate_z = derivate_act(z,hidden_act_function)
+            gamma = np.multiply(np.dot(gamma,w_prev.T),derivate_z.T)
 
-        w_i = w - mu*dif_C.T
+        grad = np.dot(gamma.T, act[i])
+        gW.append(grad)
+        w_i = w - mu*grad.T
         W_i.append(w_i)
         w_prev = w
-
-    return()    
+    cost = (1/2*M)*(act[len(act)-1]-ye)
+    return gW[::-1], cost
 
 # Update W and V
-def updWV_sgdm():
-        
-    return()
+def updWV_sgdm(W,V, gW, param):
+    mu = param[9]
+    W_i = []
+    V_i = []
+    for i in range(len(W)):
+        w_i = W[i] - mu*gW[i].T
+        v_i = V[i] - mu*gW[i].T
+        W_i.append(w_i)
+        V_i.append(v_i)
+    return(W_i,V_i)
 
 # Measure
 def metricas(x,y):
-        
-    return()
+    print(x.shape[1])
+    print(y.shape[1])
+    cm = np.zeros((y.shape[1], x.shape[1]))
+    for real, predicted in zip(y, x):
+        cm[np.argmax(real)][np.argmax(predicted)] += 1
+    f_score = []
+    for index, feature in enumerate(cm): 
+        TP = feature[index]
+        FP = cm.sum(axis=0)[index] - TP
+        FN = cm.sum(axis=1)[index] - TP
+        recall = TP / (TP + FN)
+        precision = TP / (TP + FP)
+        f_score.append((2 * (precision * recall) / (precision + recall)))
+    f_score.append(np.array(f_score).mean())
+    np.savetxt('cmatriz.csv', cm)
+    np.savetxt('fscores.csv', f_score,fmt="%1.25f")
+    return (cm, np.array(f_score))
+
     
-#Confusion matrix
-def confusion_matrix(z,y):
+    
+# #Confusion matrix
+# def confusion_matrix(z,y):
         
-    return(cm)
+#     return(cm)
 
 #Activation function
 def act_function(w,X,function_number):
