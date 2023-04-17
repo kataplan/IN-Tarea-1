@@ -195,10 +195,7 @@ def create_dtrn_dtst(X_list:np.array, Y_list, p):
   
   dtrn = XY[:train_size, :]  
   dtst = XY[train_size:, :]
- 
-  # Crear archivo de training csv
-  np.savetxt('dtrn.csv', dtrn, delimiter=',',fmt="%1.5f")
-  np.savetxt('dtst.csv', dtst, delimiter=',',fmt="%1.5f")
+
 
   return dtrn, dtst
 
