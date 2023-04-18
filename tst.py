@@ -9,18 +9,17 @@ def save_measure(cm,Fsc):
  
 
 def load_w():
-    # W = np.load('w_snn.npz', allow_pickle=True)
-    # w = W['W']
+    W = np.load('w_snn.npz', allow_pickle=True)
+    w = W['W']
 
-    W = np.load("w_snn_MANUEL.npz")
-    w = list({key: W[key] for key in W.keys()}.values())
-    for i in range(len(w)):
-        w[i] = np.transpose(w[i])
+    # W = np.load("w_snn_MANUEL.npz")
+    # w = list({key: W[key] for key in W.keys()}.values())
+    # for i in range(len(w)):
+    #     w[i] = np.transpose(w[i])
 
-    for w_i in w:
-        print(w_i.shape)
+    # for w_i in w:
+    #     print(w_i.shape)
     return w
-
 
 
 def load_data_test(param):

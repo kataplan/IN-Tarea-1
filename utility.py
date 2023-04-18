@@ -14,9 +14,9 @@ def iniWs(L,nodes):
     W = []
     V = []
     for i in range(L):
-        w,v = iniW(nodes[i],nodes[i+1])
+        w= iniW(nodes[i],nodes[i+1])
         W.append(w)
-        V.append(v)
+        V.append(np.zeros_like(w))
     return(W, V)
 
 # Initialize weights for one-layer    
@@ -24,8 +24,7 @@ def iniW(next,prev):
     r = np.sqrt(6/(next + prev))
     w = np.random.rand(next,prev)
     w = w*2*r-r
-    v = np.zeros_like(w)
-    return w,v
+    return w
 
 # Feed-forward of SNN
 def forward(x,W,n_function):        
@@ -45,17 +44,17 @@ def forward(x,W,n_function):
 def gradW(act, ye, W, param): 
     mu = param[9]
     M = int(param[8])
-
     e = ye - act[len(act)-1]
-    hidden_act_function = param[6]
+    hidden_act_function = int(param[6])
     gW = []
     W_i = []
+
     for i in reversed(range(len(W))): # reversed para tomar primero la salida
         w = W[i]
         z  = np.dot(w.T,act[i].T)
         if i == len(W)-1: # primera iteracion osea capa de salida
             derivate_z = derivate_act(z,5)
-            gamma = np.multiply(e  ,derivate_z)
+            gamma = np.multiply(e ,derivate_z)
         else:
             derivate_z = derivate_act(z,hidden_act_function)
             gamma = np.multiply(np.dot(gamma,w_prev.T),derivate_z.T)
@@ -65,25 +64,24 @@ def gradW(act, ye, W, param):
         w_i = w - mu*grad.T
         W_i.append(w_i)
         w_prev = w
-    cost = (1/2*M)*(act[len(act)-1]-ye)
+    cost = (1/2*M)*(act[len(act)-1]-ye)**2
     return gW[::-1], cost
 
 # Update W and V
 def updWV_sgdm(W,V, gW, param):
     mu = param[9]
+    beta = param[10]
     W_i = []
     V_i = []
     for i in range(len(W)):
-        w_i = W[i] - mu*gW[i].T
-        v_i = V[i] - mu*gW[i].T
+        v_i = beta *V[i] - mu*gW[i].T
+        w_i = W[i] - v_i
         W_i.append(w_i)
         V_i.append(v_i)
     return(W_i,V_i)
 
 # Measure
 def metricas(x,y):
-    print(x.shape[1])
-    print(y.shape[1])
     cm = np.zeros((y.shape[1], x.shape[1]))
     for real, predicted in zip(y, x):
         cm[np.argmax(real)][np.argmax(predicted)] += 1
@@ -100,12 +98,6 @@ def metricas(x,y):
     np.savetxt('fscores.csv', f_score,fmt="%1.25f")
     return (cm, np.array(f_score))
 
-    
-    
-# #Confusion matrix
-# def confusion_matrix(z,y):
-        
-#     return(cm)
 
 #Activation function
 def act_function(w,X,function_number):
@@ -115,7 +107,7 @@ def act_function(w,X,function_number):
     if(function_number==2):
         h_z = L_ReLu_function(z).T
     if(function_number==3):
-        h_z = ELU_function(z).T
+        h_z = ELU_function(z).T 
     if(function_number==4):
         h_z = SELU_function(z).T
     if(function_number==5):

@@ -55,7 +55,7 @@ def train(x,y,param):
 
     for i in range(iter):
         x,y = sort_data_ramdom(x,y)
-        cost, W, W = trn_minibatch(x,y,W,V, param) 
+        cost, W, V = trn_minibatch(x,y,W,V, param) 
         MSE.append(np.mean(cost))
         if (i  % 10)==0:
             print("Iterar-SGD:", i, MSE[i])
