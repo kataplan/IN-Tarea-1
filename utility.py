@@ -44,7 +44,7 @@ def forward(x,W,n_function):
 def gradW(act, ye, W, param): 
     mu = param[9]
     M = int(param[8])
-    e = ye - act[len(act)-1]
+    e = (ye - act[len(act)-1])/ye.shape[0]
     hidden_act_function = int(param[6])
     gW = []
     W_i = []
@@ -57,6 +57,8 @@ def gradW(act, ye, W, param):
             gamma = np.multiply(e ,derivate_z)
         else:
             derivate_z = derivate_act(z,hidden_act_function)
+            if(hidden_act_function == 5):
+                derivate_z = derivate_z.T
             gamma = np.multiply(np.dot(gamma,w_prev.T),derivate_z.T)
 
         grad = np.dot(gamma.T, act[i])
@@ -94,8 +96,7 @@ def metricas(x,y):
         precision = TP / (TP + FP)
         f_score.append((2 * (precision * recall) / (precision + recall)))
     f_score.append(np.array(f_score).mean())
-    np.savetxt('cmatriz.csv', cm)
-    np.savetxt('fscores.csv', f_score,fmt="%1.25f")
+
     return (cm, np.array(f_score))
 
 
