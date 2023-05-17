@@ -3,9 +3,8 @@
 import pandas as pd
 import numpy as np
 
+
 # load parameters to train the SNN
-
-
 def load_cnf():
     cnf = np.genfromtxt("cnf.csv")
     return cnf
@@ -21,34 +20,32 @@ def iniWs(L, nodes):
         V.append(np.zeros_like(w))
     return (W, V)
 
+
 # Initialize weights for one-layer
-
-
 def iniW(next, prev):
     r = np.sqrt(6/(next + prev))
     w = np.random.rand(next, prev)
     w = w*2*r-r
     return w
 
+
 # Feed-forward of SNN
-
-
 def forward(x, W, n_function):
     a = x
     A = [a]
+    
     for i in range(len(W)):
         w = W[i]
         if i == len(W)-1:
-            a_i = (act_function(w.T, a.T, 5))
+            a_i = (act_function(w, a.T, 5))
         else:
-            a_i = (act_function(w.T, a.T, n_function))
+            a_i = (act_function(w, a.T, n_function))
         A.append(a_i)
         a = a_i
     return A
 
+
 # Feed-Backward of SNN
-
-
 def gradW(act, ye, W, param):
     mu = param[9]
     M = int(param[8])
@@ -77,9 +74,8 @@ def gradW(act, ye, W, param):
     cost = (1/2*M)*(act[len(act)-1]-ye)**2
     return gW[::-1], cost
 
+
 # Update W and V
-
-
 def updWV_sgdm(W, V, gW, param):
     mu = param[9]
     beta = param[10]
@@ -92,9 +88,8 @@ def updWV_sgdm(W, V, gW, param):
         V_i.append(v_i)
     return (W_i, V_i)
 
+
 # Measure
-
-
 def metricas(x, y):
     cm = np.zeros((y.shape[1], x.shape[1]))
     for real, predicted in zip(y, x):

@@ -1,45 +1,48 @@
 # SNN's Training :
 
-import pandas     as pd
-import numpy      as np
-import utility    as ut
+import pandas as pd
+import numpy as np
+import utility as ut
 
-#Save weights and MSE  of the SNN
+
+# Save weights and MSE  of the SNN
 def save_w_mse():
     ...
     return
 
-#miniBatch-SGDM's Training 
-def trn_minibatch(x,y,W,V,param):
+
+# miniBatch-SGDM's Training
+def trn_minibatch(x, y, W, V, param):
     M = int(param[8])
     N = x.shape[0]
-    nBatch = (N // M) #NO TERMINA DE USAR TODOS LOS DATOS
+    nBatch = (N // M)  # NO TERMINA DE USAR TODOS LOS DATOS
     act_f = int(param[6])
-    
+
     # Training loop
     for n in range(1, nBatch+1):
         Idx = get_Idx_n_Batch(n, M)
-        xe = x[Idx,:]
-        ye = y[Idx,:]
+        xe = x[Idx, :]
+        ye = y[Idx, :]
         act = ut.forward(xe, W, act_f)
         gW, cost = ut.gradW(act, ye, W, param)
-        W, V = ut.updWV_sgdm(W,V, gW, param)
-    
+        W, V = ut.updWV_sgdm(W, V, gW, param)
+
     return cost, W, V
 
-#SNN's Training 
-def train(x,y,param):
+
+# SNN's Training
+def train(x, y, param):
 
     n_input_nodes = x.shape[1]
     n_output_nodes = y[0].shape[0]
     n_hidden_1 = int(param[4])
     n_hidden_2 = int(param[5])
     iter = int(param[11])
-    # SetUp pesos 
+    # SetUp pesos
     L = 3
-    
+
     nodes = [n_input_nodes]
-    
+
     if n_hidden_1 > 0:
         nodes.append(n_hidden_1)
     else:
@@ -50,16 +53,17 @@ def train(x,y,param):
         L = -1
     nodes.append(n_output_nodes)
 
-    W,V = ut.iniWs(L, nodes)
+    W, V = ut.iniWs(L, nodes)
     MSE = []
 
     for i in range(iter):
-        x,y = sort_data_ramdom(x,y)
-        cost, W, V = trn_minibatch(x,y,W,V, param) 
+        x, y = sort_data_ramdom(x, y)
+        cost, W, V = trn_minibatch(x, y, W, V, param)
         MSE.append(np.mean(cost))
-        if (i  % 10)==0:
+        if (i % 10) == 0:
             print("Iterar-SGD:", i, MSE[i])
-    return(W,MSE)
+    return (W, MSE)
+
 
 # Function to get the indices of the n-th batch
 def get_Idx_n_Batch(n, M):
@@ -67,12 +71,17 @@ def get_Idx_n_Batch(n, M):
     end = n*M
     return np.arange(start, end)
 
-def sort_data_ramdom(X,Y):
 
-    XY = np.concatenate((X,Y), axis=1)
+def sort_data_ramdom(X, Y):
+ 
+    XY = np.concatenate((X, Y), axis=1)
     np.random.shuffle(XY)
     X_new, Y_new = np.split(XY, [X.shape[1]], axis=1)
-    return X_new,Y_new
+    return X_new, Y_new
+
+def get_one_hot(y, K):
+  res = np.eye(K)[(y - 1).reshape(-1)]
+  return res.reshape(list(y.shape) + [K]).astype(int)
 
 # Load data to train the SNN
 def load_data_trn(param):
@@ -82,17 +91,20 @@ def load_data_trn(param):
     y = data[:,-n:]
     return(x,y)
     
-def save_w_cost(W,Cost):
-    
+def save_w_cost(W, Cost):
+
     np.savez('w_snn.npz', W=W)
     np.savetxt("costo.csv", Cost, delimiter=",", fmt="%f")
-    return  
+    return
+
+
 # Beginning ...
 def main():
-    param       = ut.load_cnf()            
-    xe,ye       = load_data_trn(param)   
-    W,Cost      = train(xe,ye,param)             
-    save_w_cost(W,Cost)
-       
-if __name__ == '__main__':   
-	 main()
+    param = ut.load_cnf()
+    xe, ye = load_data_trn(param)
+    W, Cost = train(xe, ye, param)
+    save_w_cost(W, Cost)
+
+
+if __name__ == '__main__':
+    main()
