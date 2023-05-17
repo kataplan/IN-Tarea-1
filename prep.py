@@ -40,38 +40,34 @@ def normalize(x, a=0.01, b=0.99):
     return x
 
 
+# Fourier spectral entropy
 def entropy_spectral(X):
+    x_max = 1
+    x_min = 0.01
+    acum_entropy = 0
+
     N = X.shape[0]
     Ix = int(np.sqrt(N))
     amplitudes = np.abs(np.fft.fft(X))
-    amplitudes_norm = normalize(amplitudes)
-    x_max = 1
-    x_min = 0.01
+    amplitudes = normalize(amplitudes)
     step_range = (x_max - x_min) / Ix
-    entropy = 0
     for i in range(Ix):
         lower_bound = x_min + step_range * i
         upper_bound = lower_bound + step_range
-
-        quantity = np.where(
-            np.logical_and(amplitudes_norm >= lower_bound, amplitudes_norm < upper_bound)
-        )[0].shape[0]
-
+        quantity = np.where(np.logical_and(
+            amplitudes >= lower_bound, amplitudes < upper_bound))[0].shape[0]
         if quantity != 0:
             prob = quantity / N
-            entropy =+  prob * np.log2(prob)
-            
-
-    return -entropy
-
+            entropy = prob * np.log2(prob)
+            acum_entropy += entropy
+    return -acum_entropy
 
 
-# Binary Label
-def binary_label(i, n):
+def binary_label(i, n,nbr_variable, n_frame):
     label = [0] * n
     label[i] = 1
-    return np.array(label)
-
+    Y = np.array(np.tile(label, (nbr_variable*n_frame, 1)))
+    return Y
 
 
 def calculate_dyadic_component(H):
@@ -79,7 +75,6 @@ def calculate_dyadic_component(H):
     b = np.concatenate((H[0, :1], H[1]))
     c = (a + b) / 2
     return c
-
 
 
 def create_hankel_matrix(frame: np.array, L=2):
@@ -131,10 +126,10 @@ def hankel_features(X, Param):
         c, Sc = hankel_svd(frames, level)
 
         # Compute entropy of spectral amplitudes
-        entropy_c = np.array([])
+        entropy_c = []
         for c_i in c:
             entropy_c_i = entropy_spectral(c_i)
-            entropy_c = np.append(entropy_c, entropy_c_i)
+            entropy_c.append(entropy_c_i)
         # Compute SVD
         F[j] = np.concatenate((entropy_c, Sc))
     return F
@@ -149,6 +144,7 @@ def data_class(df_list, j, i):
 # Create Features from Data
 # lista de matrices(clases)
 def create_features(Dat_list, param):
+    n_frame = int(param[1])
     nbr_class = len(Dat_list)
     for i in range(nbr_class):
         nbr_variable = Dat_list[i].shape[1]
@@ -162,24 +158,20 @@ def create_features(Dat_list, param):
             else:
                 datF = np.concatenate((datF, Fj))
 
-        label = binary_label(i, nbr_class)
+        label = binary_label(i, nbr_class, nbr_variable, n_frame)
         if i == 0:
             X = datF
-            Y = label.reshape(1, -1)
+            Y = label
         else:
-            Y = np.vstack((Y, label.reshape(1, -1)))
+            Y = np.vstack((Y, label))
             X = np.concatenate((X, datF), axis=0)
     return X, Y
 
 
-def create_dtrn_dtst(X, binary_matrix, p):
-    for i in range(binary_matrix.shape[1]):
-        if i == 0:
-            Y = np.tile(binary_matrix[:, i], 480)
-        else:
-            Y = np.vstack((Y, np.tile(binary_matrix[:, i], 480)))
-
-    XY = np.concatenate((X.T, Y)).T
+def create_dtrn_dtst(X, Y, p):
+    print(X.shape)
+    print(Y.shape)
+    XY = np.concatenate((X.T, Y.T)).T
     # Reordenar aleatoriamente las posiciones de la data
     np.random.shuffle(XY)
 
