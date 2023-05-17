@@ -16,9 +16,12 @@ def save_data(X, Y, param):
 
 # normalize data
 def data_norm(X):
-
+    a = 0.01
+    b = 0.99
     for i in range(X.shape[1]):
-        column_norm = normalize_column(X[:,i])
+        xmin = np.min(X[:, i])
+        xmax = np.max(X[:, i])
+        column_norm = (X[:, i] - xmin) / (xmax - xmin) * (b - a) + a
         if i == 0:
             x_norm = column_norm
         else:
@@ -27,7 +30,7 @@ def data_norm(X):
     return x_norm
 
 
-def normalize_column(x, a=0.01, b=0.99):
+def normalize(x, a=0.01, b=0.99):
     x_min = x.min()
     x_max = x.max()
     if x_max > x_min:
@@ -41,7 +44,7 @@ def entropy_spectral(X):
     N = X.shape[0]
     Ix = int(np.sqrt(N))
     amplitudes = np.abs(np.fft.fft(X))
-    amplitudes_norm = normalize_column(amplitudes)
+    amplitudes_norm = normalize(amplitudes)
     x_max = 1
     x_min = 0.01
     step_range = (x_max - x_min) / Ix
@@ -71,7 +74,7 @@ def binary_label(i, n):
 
 
 
-def dyadic_component(H):
+def calculate_dyadic_component(H):
     a = np.concatenate((H[0], H[1, -1:]))
     b = np.concatenate((H[0, :1], H[1]))
     c = (a + b) / 2
@@ -103,8 +106,8 @@ def recursive_level(H, max_level, level, C, S_components):
     h_1 = s[1] * U[:, 1].reshape(-1, 1) * Vt[1, :].reshape(1, -1)
 
     if max_level == level:
-        c_1 = dyadic_component(h_0)
-        c_2 = dyadic_component(h_1)
+        c_1 = calculate_dyadic_component(h_0)
+        c_2 = calculate_dyadic_component(h_1)
         C.append(c_1)
         C.append(c_2)
         S_components.append(s[0])
