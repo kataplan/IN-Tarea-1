@@ -8,122 +8,110 @@ import os
 def save_data(X, Y, param):
     p = param[7]
     dtrn, dtst = create_dtrn_dtst(X, Y, p)  # p: denota porcentaje de training.
-
-    np.savetxt("dtrn.csv", dtrn, delimiter=",", fmt="%f")
-    np.savetxt("dtst.csv", dtst, delimiter=",", fmt="%f")
+    np.savetxt("dtrn.csv", dtrn, delimiter=",")
+    np.savetxt("dtst.csv", dtst, delimiter=",")
 
     return
 
+
 # normalize data
-
-
 def data_norm(X):
-    xmin = np.min(X)
-    xmax = np.max(X)
-    a = 0.01
-    b = 0.99
-    datos_norm = (X - xmin) / (xmax - xmin) * (b - a) + a
-    return datos_norm
+
+    for i in range(X.shape[1]):
+        column_norm = normalize_column(X[:,i])
+        if i == 0:
+            x_norm = column_norm
+        else:
+            x_norm = np.column_stack((x_norm, column_norm))
+
+    return x_norm
+
+
+def normalize_column(x, a=0.01, b=0.99):
+    x_min = x.min()
+    x_max = x.max()
+    if x_max > x_min:
+        x = ((x - x_min) / (x_max - x_min)) * (b - a) + a
+    else:
+        x = a
+    return x
+
+
+def entropy_spectral(X):
+    N = X.shape[0]
+    Ix = int(np.sqrt(N))
+    amplitudes = np.abs(np.fft.fft(X))
+    amplitudes_norm = normalize_column(amplitudes)
+    x_max = 1
+    x_min = 0.01
+    step_range = (x_max - x_min) / Ix
+    entropy = 0
+    for i in range(Ix):
+        lower_bound = x_min + step_range * i
+        upper_bound = lower_bound + step_range
+
+        quantity = np.where(
+            np.logical_and(amplitudes_norm >= lower_bound, amplitudes_norm < upper_bound)
+        )[0].shape[0]
+
+        if quantity != 0:
+            prob = quantity / N
+            entropy =+  prob * np.log2(prob)
+            
+
+    return -entropy
+
+
 
 # Binary Label
-
-
 def binary_label(i, n):
     label = [0] * n
     label[i] = 1
-    return label
+    return np.array(label)
 
 
-# Hankel-SVD
-def hankel_svd(frame, level):
-    L = 2  # matriz diadica
 
-    frames = [frame]
-    for i in range(level):
-        hankels = []
-        # se consigue las matriz de hankel para el primer frame y los c que llegan
-        for f in frames:
-            h = create_hankel_matrix(f, L)
-            hankels.append(h)
-
-        c = []
-        for h in hankels:
-
-            c_0, c_1 = decomposition_svd(h)
-            c.append(c_0.reshape(-1))
-            c.append(c_1.reshape(-1))
-
-        frames = c.copy()
+def dyadic_component(H):
+    a = np.concatenate((H[0], H[1, -1:]))
+    b = np.concatenate((H[0, :1], H[1]))
+    c = (a + b) / 2
     return c
 
-
-def calculate_dyadic_component(H: np.ndarray):
-    c = []
-    j = 0
-    k = 1
-    r = H.shape[1]
-    for i in range(1, r):
-        component = (H[j, i] + H[k, i-1]) / 2
-        c.append(component)
-    c.insert(0, H[0, 0])
-    c.append(H[1, r-1])
-    return np.array(c).reshape(1, -1)
-
-
-def decomposition_svd(h_matrix):
-    U, s, vh = np.linalg.svd(h_matrix, full_matrices=False)
-
-    M_0 = s[0] * U[:, 0].reshape(-1, 1) * vh[0, :].reshape(1, -1)
-    M_1 = s[1] * U[:, 1].reshape(-1, 1) * vh[1, :].reshape(1, -1)
-
-    c_0 = calculate_dyadic_component(M_0)
-    c_1 = calculate_dyadic_component(M_1)
-
-    return c_0, c_1
 
 
 def create_hankel_matrix(frame: np.array, L=2):
     n = len(frame)
-
     K = n - L + 1
     H_frame = np.zeros((L, K))
     for i in range(L):
-        for j in range(K):
-            if i + j < n:
-                H_frame[i][j] = frame[i + j]
+        H_frame[i] = frame[i:i + K]
     return H_frame
 
 
-def elements_in_range(x, lower_bound, upper_bound):
-    cont = 0
-    for num in x:
-        if lower_bound <= num <= upper_bound:
-            cont += 1
+# Hankel-SVD
+def hankel_svd(frame, j):
+    C = []
+    Sc = []
+    H_matrix = create_hankel_matrix(frame, 2)
+    recursive_level(H_matrix, j, 1, C, Sc)
+    return C, Sc
 
-    return cont
 
+def recursive_level(H, max_level, level, C, S_components):
+    U, s, Vt = np.linalg.svd(H, full_matrices=False)
+    h_0 = s[0] * U[:, 0].reshape(-1, 1) * Vt[0, :].reshape(1, -1)
+    h_1 = s[1] * U[:, 1].reshape(-1, 1) * Vt[1, :].reshape(1, -1)
 
-def entropy_spectral(X):
-    amplitudes = np.abs(np.fft.fft(X))
-
-    I_x = int(np.sqrt(len(amplitudes)))
-    x_max = np.max(amplitudes)
-    x_min = np.min(amplitudes)
-    x_range = x_max - x_min
-
-    entropy = 0
-    prob = 0
-
-    step_range = x_range / I_x
-    lower_bound = x_min
-
-    for _ in range(I_x):
-        upper_bound = lower_bound + step_range
-        prob = 0 if elements_in_range(amplitudes, lower_bound, upper_bound) == 0 else elements_in_range(
-            amplitudes, lower_bound, upper_bound) / len(amplitudes)
-        entropy += prob*np.log2(prob)
-
-    return -entropy
+    if max_level == level:
+        c_1 = dyadic_component(h_0)
+        c_2 = dyadic_component(h_1)
+        C.append(c_1)
+        C.append(c_2)
+        S_components.append(s[0])
+        S_components.append(s[1])
+    else:
+        recursive_level(h_0, max_level, level + 1, C, S_components)
+        recursive_level(h_1, max_level, level + 1, C, S_components)
 
 
 def hankel_features(X, Param):
@@ -132,41 +120,33 @@ def hankel_features(X, Param):
     level = int(Param[3])  # nivel de descomposición
     frames = np.zeros((l_frame, n_frame))
 
-    F = []
+    F = np.empty((n_frame, 2 ** (level + 1)))
     for j in range(n_frame):
         start_idx = j * l_frame
         end_idx = start_idx + l_frame
-        frames[:, j] = X[start_idx:end_idx]
+        frames = X[start_idx:end_idx]
+        c, Sc = hankel_svd(frames, level)
 
-        c = hankel_svd(frames[:, j], level)
-
-        # Verificar si esto está bien
         # Compute entropy of spectral amplitudes
         entropy_c = np.array([])
         for c_i in c:
             entropy_c_i = entropy_spectral(c_i)
             entropy_c = np.append(entropy_c, entropy_c_i)
         # Compute SVD
-        U, S, V = np.linalg.svd(c, full_matrices=False)
-        # Concatenate features
-        F.append([entropy_c, S])
-
-    return np.array(F).reshape(-1, 2*2**level)
+        F[j] = np.concatenate((entropy_c, Sc))
+    return F
 
 
 # Obtain j-th variables of the i-th class
 def data_class(df_list, j, i):
     df = df_list[i]
-    return df.iloc[:, j]
+    return df[:, j]
+
 
 # Create Features from Data
 # lista de matrices(clases)
-
-
 def create_features(Dat_list, param):
     nbr_class = len(Dat_list)
-    Y = []
-    X = []
     for i in range(nbr_class):
         nbr_variable = Dat_list[i].shape[1]
         datF = np.array([])
@@ -180,27 +160,23 @@ def create_features(Dat_list, param):
                 datF = np.concatenate((datF, Fj))
 
         label = binary_label(i, nbr_class)
-        Y.append(label)
-        X.append(datF)
-
+        if i == 0:
+            X = datF
+            Y = label.reshape(1, -1)
+        else:
+            Y = np.vstack((Y, label.reshape(1, -1)))
+            X = np.concatenate((X, datF), axis=0)
     return X, Y
 
 
-def add_array_rows(X, Y):
-    Y_rep = np.tile(Y, (X.shape[0], 1))  # replicar Y n veces
-    return np.hstack((X, Y_rep))
+def create_dtrn_dtst(X, binary_matrix, p):
+    for i in range(binary_matrix.shape[1]):
+        if i == 0:
+            Y = np.tile(binary_matrix[:, i], 480)
+        else:
+            Y = np.vstack((Y, np.tile(binary_matrix[:, i], 480)))
 
-
-def create_dtrn_dtst(X_list: np.array, Y_list, p):
-
-    XY = np.array([])
-    len(Y_list[1])
-    for i in range(len(Y_list[1])):
-        if (i == 0):
-            XY = add_array_rows(X_list[i], Y_list[i])
-            continue
-        XY = np.concatenate((XY, add_array_rows(X_list[i], Y_list[i])))
-
+    XY = np.concatenate((X.T, Y)).T
     # Reordenar aleatoriamente las posiciones de la data
     np.random.shuffle(XY)
 
@@ -229,10 +205,9 @@ def load_data():
     dataframes = []
     for file in files:
         filepath = os.path.join(dir_path, file)
-        df = pd.read_csv(filepath, header=None)
+        df = np.loadtxt(filepath, delimiter=',')
         dataframes.append(df)
 
-    # Combinar todos los dataframes en uno solo
     return dataframes
 
 # Beginning
