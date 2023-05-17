@@ -169,8 +169,6 @@ def create_features(Dat_list, param):
 
 
 def create_dtrn_dtst(X, Y, p):
-    print(X.shape)
-    print(Y.shape)
     XY = np.concatenate((X.T, Y.T)).T
     # Reordenar aleatoriamente las posiciones de la data
     np.random.shuffle(XY)
