@@ -2,9 +2,11 @@
 
 import pandas as pd
 import numpy as np
-
+import sys
 
 # load parameters to train the SNN
+
+
 def load_cnf():
     cnf = np.genfromtxt("cnf.csv")
     return cnf
@@ -15,7 +17,7 @@ def iniWs(L, nodes):
     W = []
     V = []
     for i in range(L):
-        w = iniW(nodes[i], nodes[i+1])
+        w = iniW(nodes[i+1], nodes[i])
         W.append(w)
         V.append(np.zeros_like(w))
     return (W, V)
@@ -31,47 +33,38 @@ def iniW(next, prev):
 
 # Feed-forward of SNN
 def forward(x, W, n_function):
-    a = x
-    A = [a]
-    
-    for i in range(len(W)):
-        w = W[i]
-        if i == len(W)-1:
-            a_i = (act_function(w, a.T, 5))
+
+    L = len(W)
+    A = [0] * (L+1)
+    Z = [0] * L
+    A[0] = x.T
+
+    for i in range(0, L):
+        if i == L-1:
+            f_act = 5
         else:
-            a_i = (act_function(w, a.T, n_function))
-        A.append(a_i)
-        a = a_i
-    return A
+            f_act = n_function
+        Z[i] = np.dot(W[i], A[i])
+        A[i+1] = act_function(Z[i], f_act)
+
+    return A, Z
 
 
 # Feed-Backward of SNN
-def gradW(act, ye, W, param):
-    mu = param[9]
-    M = int(param[8])
-    e = (ye - act[len(act)-1])/ye.shape[0]
-    hidden_act_function = int(param[6])
+def gradW(act, ye, z, W, param):
+    L = len(W)
     gW = []
-    W_i = []
-
-    for i in reversed(range(len(W))):  # reversed para tomar primero la salida
-        w = W[i]
-        z = np.dot(w.T, act[i].T)
-        if i == len(W)-1:  # primera iteracion osea capa de salida
-            derivate_z = derivate_act(z, 5)
-            gamma = np.multiply(e, derivate_z)
+    hidden_act_function = int(param[6])
+    gamma = [0] * L
+    error = (ye.T - act[L])
+    for i in reversed(range(1, L+1)):
+        if i == L:  # primera iteracion osea capa de salida
+            gamma[i-1] = np.multiply(error, derivate_act(z[i-1], 5))
         else:
-            derivate_z = derivate_act(z, hidden_act_function)
-            if (hidden_act_function == 5):
-                derivate_z = derivate_z.T
-            gamma = np.multiply(np.dot(gamma, w_prev.T), derivate_z.T)
-
-        grad = np.dot(gamma.T, act[i])
+            gamma[i-1] = np.multiply(np.dot(W[i].T, gamma[i]),  derivate_act(z[i-1], hidden_act_function).T)
+        grad = np.dot(gamma[i-1], act[i-1].T)
         gW.append(grad)
-        w_i = w - mu*grad.T
-        W_i.append(w_i)
-        w_prev = w
-    cost = (1/2*M)*(act[len(act)-1]-ye)**2
+    cost = (np.sum(error ** 2) / (2 * ye.shape[0]))
     return gW[::-1], cost
 
 
@@ -79,14 +72,11 @@ def gradW(act, ye, W, param):
 def updWV_sgdm(W, V, gW, param):
     mu = param[9]
     beta = param[10]
-    W_i = []
-    V_i = []
     for i in range(len(W)):
-        v_i = beta * V[i] - mu*gW[i].T
-        w_i = W[i] - v_i
-        W_i.append(w_i)
-        V_i.append(v_i)
-    return (W_i, V_i)
+        V[i] = beta * V[i] - mu * gW[i]
+        W[i] = W[i] - V[i]
+
+    return W, V
 
 
 # Measure
@@ -108,8 +98,7 @@ def metricas(x, y):
 
 
 # Activation function
-def act_function(w, X, function_number):
-    z = np.dot(w.T, X)
+def act_function(z, function_number):
     if (function_number == 1):
         h_z = ReLu_function(z).T
     if (function_number == 2):
@@ -120,7 +109,7 @@ def act_function(w, X, function_number):
         h_z = SELU_function(z).T
     if (function_number == 5):
         h_z = sigmoidal_function(z).T
-    return (h_z)
+    return (h_z).T
 
 
 def derivate_act(z, function_number):
@@ -134,7 +123,7 @@ def derivate_act(z, function_number):
         h_z = d_SELU_function(z)
     elif (function_number == 5):
         h_z = d_sigmoidal_function(z)
-    return (h_z)
+    return (h_z).T
 
 
 def output_activation(v, h):

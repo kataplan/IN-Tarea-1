@@ -15,7 +15,7 @@ def save_w_mse():
 def trn_minibatch(x, y, W, V, param):
     M = int(param[8])
     N = x.shape[0]
-    nBatch = (N // M)  # NO TERMINA DE USAR TODOS LOS DATOS
+    nBatch = (N // M)
     act_f = int(param[6])
 
     # Training loop
@@ -23,8 +23,8 @@ def trn_minibatch(x, y, W, V, param):
         Idx = get_Idx_n_Batch(n, M)
         xe = x[Idx, :]
         ye = y[Idx, :]
-        act = ut.forward(xe, W, act_f)
-        gW, cost = ut.gradW(act, ye, W, param)
+        act, z = ut.forward(xe, W, act_f)
+        gW, cost = ut.gradW(act, ye, z, W, param)
         W, V = ut.updWV_sgdm(W, V, gW, param)
 
     return cost, W, V
@@ -73,26 +73,22 @@ def get_Idx_n_Batch(n, M):
 
 
 def sort_data_ramdom(X, Y):
- 
     XY = np.concatenate((X, Y), axis=1)
     np.random.shuffle(XY)
     X_new, Y_new = np.split(XY, [X.shape[1]], axis=1)
     return X_new, Y_new
 
-def get_one_hot(y, K):
-  res = np.eye(K)[(y - 1).reshape(-1)]
-  return res.reshape(list(y.shape) + [K]).astype(int)
 
 # Load data to train the SNN
 def load_data_trn(param):
     n = int(param[0])
     data = np.genfromtxt('dtrn.csv', delimiter=',')
-    x = data[:,:-n]
-    y = data[:,-n:]
-    return(x,y)
-    
-def save_w_cost(W, Cost):
+    x = data[:, :-n]
+    y = data[:, -n:]
+    return (x, y)
 
+
+def save_w_cost(W, Cost):
     np.savez('w_snn.npz', W=W)
     np.savetxt("costo.csv", Cost, delimiter=",", fmt="%f")
     return
