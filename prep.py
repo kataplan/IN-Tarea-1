@@ -51,11 +51,12 @@ def entropy_spectral(X):
     amplitudes = np.abs(np.fft.fft(X))
     amplitudes = normalize(amplitudes)
     step_range = (x_max - x_min) / Ix
+
     for i in range(Ix):
         lower_bound = x_min + step_range * i
         upper_bound = lower_bound + step_range
-        quantity = np.where(np.logical_and(
-            amplitudes >= lower_bound, amplitudes < upper_bound))[0].shape[0]
+        quantity = np.count_nonzero(np.logical_and(
+            amplitudes >= lower_bound, amplitudes < upper_bound))
         if quantity != 0:
             prob = quantity / N
             entropy = prob * np.log2(prob)
@@ -63,7 +64,7 @@ def entropy_spectral(X):
     return -acum_entropy
 
 
-def binary_label(i, n,nbr_variable, n_frame):
+def binary_label(i, n, nbr_variable, n_frame):
     label = [0] * n
     label[i] = 1
     Y = np.array(np.tile(label, (nbr_variable*n_frame, 1)))
