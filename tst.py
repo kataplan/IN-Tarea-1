@@ -9,14 +9,17 @@ def save_measure(cm, Fsc):
 
 
 def load_w():
-    W = np.load('w_snn.npz', allow_pickle=True)
-    w = W['W']
-    return w
+    pesos = np.load('w_snn.npz', allow_pickle=True)
+    W =[]
+    for i in range(len(pesos)):
+        W.append(pesos[f'arr_{i}'])
+    return W
+
 
 
 def load_data_test(param):
     n = int(param[0])
-    data = np.genfromtxt('dtrn.csv', delimiter=',')
+    data = np.genfromtxt('dtst.csv', delimiter=',')
     x = np.array(data[:,:-n])
     y = np.array(data[:,-n:])
     return x,y
@@ -27,8 +30,8 @@ def main():
     param = ut.load_cnf()
     xv, yv = load_data_test(param)
     W = load_w()
-    zv = ut.forward(xv, W, int(param[6]))
-    cm, Fsc = ut.metricas(yv, zv[len(zv)-1])
+    zv,_ = ut.forward(xv, W, int(param[6]))
+    cm, Fsc = ut.metricas(yv, zv[len(zv)-1].T)
     save_measure(cm, Fsc)
 
 
