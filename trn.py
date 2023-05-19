@@ -46,13 +46,13 @@ def train(x, y, param):
     if n_hidden_1 > 0:
         nodes.append(n_hidden_1)
     else:
-        L = -1
+        L -= -1
     if n_hidden_2 > 0:
         nodes.append(n_hidden_2)
     else:
-        L = -1
+        L -=1
     nodes.append(n_output_nodes)
-
+    print(L)
     W, V = ut.iniWs(L, nodes)
     MSE = []
 
@@ -89,7 +89,7 @@ def load_data_trn(param):
 
 
 def save_w_cost(W, Cost):
-    np.savez('w_snn.npz', W=W)
+    np.savez('w_snn.npz', *W)
     np.savetxt("costo.csv", Cost, delimiter=",", fmt="%f")
     return
 
