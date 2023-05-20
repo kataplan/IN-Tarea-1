@@ -31,7 +31,11 @@ def main():
     xv, yv = load_data_test(param)
     W = load_w()
     zv,_ = ut.forward(xv, W, int(param[6]))
-    cm, Fsc = ut.metricas(yv, zv[len(zv)-1].T)
+    
+    print("yvshape", yv.T.shape)
+    
+    print("shape.zv", zv.shape)
+    cm, Fsc = ut.metricas(yv.T, zv)
     save_measure(cm, Fsc)
 
 

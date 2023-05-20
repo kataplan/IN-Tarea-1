@@ -55,6 +55,7 @@ def gradW(act,x, ye, z, W, param):
     gW = []
     N = ye.shape[0]
     hidden_f = int(param[6])
+    #cost = np.sum(((1/(2*N)) * ((act - ye.T)**2))), EL MANU LO TIENE ASI
 
     for i in reversed(range(1, L+1)):
         if i == L:  # primera iteracion osea capa de salida
@@ -69,7 +70,7 @@ def gradW(act,x, ye, z, W, param):
                 grad = np.dot(dZ, act_function(z[i-2],hidden_f).T)
         dA = np.dot(W[i-1].T, dZ)
         gW.append(grad)
-    cost = (1/(2*N)) * ((act - ye.T)**2)
+    cost = ((1/(2*N)) * ((act - ye.T)**2))
 
     # se retorna dado vuelta ya que parte el 3 y baja hasta el 1
     return gW[::-1], cost
@@ -87,8 +88,11 @@ def updWV_sgdm(W, V, gW, param):
 
 
 # Measure
-def metricas(x, y):
-    cm = np.zeros((y.shape[1], x.shape[1]))
+def metricasNOSOTROS(x, y):
+    print("asd")
+    print(y.shape[0])
+    print(x.shape[0])
+    cm = np.zeros((x.shape[0], x.shape[0]), dtype=int)
     for real, predicted in zip(y, x):
         cm[np.argmax(real)][np.argmax(predicted)] += 1
     f_score = []
@@ -100,6 +104,28 @@ def metricas(x, y):
         precision = TP / (TP + FP)
         f_score.append((2 * (precision * recall) / (precision + recall)))
     f_score.append(np.array(f_score).mean())
+
+
+# Measure
+def metricas(Y, Y_predict):
+    cm = confusion_matrix(Y, Y_predict)
+    precision = np.nan_to_num(cm.diagonal()/cm.sum(axis=0),nan=0.0,posinf=1.0)
+    recall = np.nan_to_num(cm.diagonal()/cm.sum(axis=1),nan=0.0,posinf=1.0)
+    f_score = np.nan_to_num(2 * ((precision * recall) / (precision + recall)), nan=0.0, posinf=1.0)
+    return cm, f_score
+    
+#Confusion matrix
+def confusion_matrix(Y, Y_predict):
+    num_classes = Y.shape[0]
+    confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
+    max_indices = np.argmax(Y_predict, axis=0)
+    Y_pred = np.zeros_like(Y_predict)
+    Y_pred[max_indices, np.arange(Y_predict.shape[1])] = 1
+    for true_label in range(num_classes):
+        for predicted_label in range(num_classes):
+            confusion_matrix[true_label, predicted_label] = np.sum(
+                (Y[true_label, :] == 1) & (Y_pred[predicted_label, :] == 1))
+    return confusion_matrix
 
 
 
