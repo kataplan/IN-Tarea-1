@@ -17,8 +17,8 @@ def load_w():
 
 
 def load_data_test():
-    x = np.loadtxt("X_test.csv", delimiter=",")
-    y = np.loadtxt("Y_test.csv", delimiter=",")
+    x = np.loadtxt("xv.csv", delimiter=",")
+    y = np.loadtxt("yv.csv", delimiter=",")
     return x, y
 
 
