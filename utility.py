@@ -91,7 +91,7 @@ def act_function(Z, act_func):
 def gradW(X, AL, Z, Ye, W, params):
     N = Ye.shape[1]
     h_act_function = params[6]
-    cost = (1 / (2 * N)) * ((AL - Ye) ** 2)
+    cost = np.sum((1 / (2 * N)) * ((AL - Ye) ** 2))
     L = len(Z)
     gW = [0]*L
     for i in reversed(range(1, L + 1)):
