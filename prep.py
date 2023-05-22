@@ -34,35 +34,37 @@ def binary_label(i, m, n):
     binary_array[:, i] = 1
     return binary_array
 
-
 def entropy_spectral(components):
     amplitudes = []
-    entropies = []
+    entropias = []
 
-    for c in components:
-        dft = np.fft.fft(c)
+    for component in components:
+        dft = np.fft.fft(component)
         amplitude = np.abs(dft[:, :int(dft.shape[1] / 2)])
         amplitudes.append(amplitude)
 
-    for amplitude in amplitudes:
-        a_min = np.min(amplitude)
-        a_max = np.max(amplitude)
-        a_range = a_max - a_min
-        partitions = int(np.trunc(np.sqrt(amplitude.shape[1])))
-        step_range = a_range / partitions
-        probabilities = []
+    for a in amplitudes:
+        minA = np.min(a)
+        maxA = np.max(a)
+        a_range = maxA - minA
+        partitions = int(np.trunc(np.sqrt(a.shape[1])))
+        stepRange = a_range / partitions
+        probs = []
+
         for i in range(partitions):
-            i_min = a_min + step_range * i
-            i_max = a_min + step_range * (i + 1)
-            probablity = len(amplitude[(amplitude >= i_min) & (
-                amplitude <= i_max)]) / amplitude.shape[1]
-            probabilities.append(probablity)
-        p = np.array(probabilities)
+            minI = minA + stepRange * i
+            maxI = minA + stepRange * (i + 1)
+            probablity = len(a[(a >= minI) & (
+                a <= maxI)]) / a.shape[1]
+            probs.append(probablity)
+
+        p = np.array(probs)
+
         nonzero_prob = p[p != 0]
         entropy = -np.sum(nonzero_prob * np.log2(nonzero_prob))
-        entropies.append(entropy)
+        entropias.append(entropy)
 
-    return np.array(entropies)
+    return np.array(entropias)
 
 
 def create_hankel_matrix(frame, l):
@@ -81,6 +83,7 @@ def calculate_dyadic_component(hankel):
     for i in range(1, r):
         component = (hankel[j, i] + hankel[k, i - 1]) / 2
         c.append(component)
+
     c.insert(0, hankel[0, 0])
     c.append(hankel[1, r - 1])
     return np.array(c).reshape(1, -1)
@@ -96,17 +99,22 @@ def hankel_svd(frame, levels):
         for f in frames:
             hankel = create_hankel_matrix(f, l)
             hankels.append(hankel)
+
         c = []
         frames = []
+
         for h in hankels:
             u, s, vh = np.linalg.svd(h, full_matrices=False)
             vT = vh.T
-            h_0 = s[0] * u[:, 0].reshape(-1, 1) * vT[:, 0].reshape(-1, 1).T
-            c_0 = calculate_dyadic_component(h_0)
-            h_1 = s[1] * u[:, 1].reshape(-1, 1) * vT[:, 1].reshape(-1, 1).T
-            c_1 = calculate_dyadic_component(h_1)
-            frames.extend((c_0, c_1))
-            c.extend((c_0, c_1))
+            h0 = s[0] * u[:, 0].reshape(-1, 1) * vT[:, 0].reshape(-1, 1).T
+            c0 = calculate_dyadic_component(h0)
+            #------------------------------------------------------------------------------------------------- 
+            h1 = s[1] * u[:, 1].reshape(-1, 1) * vT[:, 1].reshape(-1, 1).T
+            c1 = calculate_dyadic_component(h1)
+
+            frames.extend((c0, c1))
+            c.extend((c0, c1))
+
         components.append(c)
         hankels = []
     return components
@@ -122,12 +130,15 @@ def create_features(X, Param):
             X = data_class(value, j)
             F = hankel_features(X, Param)
             data_f.append(F)
+
         y_shape = np.concatenate(data_f).shape[0]
         features.append(np.concatenate(data_f))
         label = binary_label(i, y_shape, total_classes)
         labels.append(label)
+
     X = np.concatenate(features)
     Y = np.concatenate(labels)
+
     return X, Y
 
 
